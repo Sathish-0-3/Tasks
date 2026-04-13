@@ -1,0 +1,23 @@
+[root@ip-172-31-38-234 ~]# mkdir my_docker_site
+[root@ip-172-31-38-234 ~]# cd my_docker_site
+[root@ip-172-31-38-234 my_docker_site]# vim index.html
+[root@ip-172-31-38-234 my_docker_site]# vim dockerfile
+[root@ip-172-31-38-234 my_docker_site]# docker build -t mysite .
+Sending build context to Docker daemon  3.072kB
+Step 1/2 : FROM nginx:alpine
+ ---> 5bd7bd52e5bc
+Step 2/2 : COPY index.html /usr/share/nginx/html/index.html
+ ---> Using cache
+ ---> a3b84987c74c
+Successfully built a3b84987c74c
+Successfully tagged mysite:latest
+[root@ip-172-31-38-234 my_docker_site]# docker images
+REPOSITORY   TAG       IMAGE ID       CREATED         SIZE
+mysite       latest    a3b84987c74c   5 minutes ago   62.2MB
+nginx        alpine    5bd7bd52e5bc   4 days ago      62.2MB
+nginx        latest    a716c9c12c38   4 days ago      161MB
+[root@ip-172-31-38-234 my_docker_site]# docker run -d -p 80:80 --name my_details_site mysite
+04d6508aefef40e2c29db47839552ef4a3992b90587b143881c47933cfead1bf
+[root@ip-172-31-38-234 my_docker_site]# docker ps
+CONTAINER ID   IMAGE     COMMAND                  CREATED          STATUS          PORTS                               NAMES
+04d6508aefef   mysite    "/docker-entrypoint.…"   11 seconds ago   Up 10 seconds   0.0.0.0:80->80/tcp, :::80->80/tcp   my_details_site
