@@ -1,0 +1,144 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "aws" {
+  alias  = "mumbai"
+  region = "ap-south-1"
+}
+
+provider "aws" {
+  alias  = "tokyo"
+  region = "ap-northeast-1"
+}
+
+data "aws_ami" "amazon_linux_mumbai" {
+  provider    = aws.mumbai
+  most_recent = true
+
+  owners = ["137112412989"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+}
+
+data "aws_ami" "amazon_linux_tokyo" {
+  provider    = aws.tokyo
+  most_recent = true
+
+  owners = ["137112412989"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+}
+
+resource "aws_security_group" "mumbai_sg" {
+  provider = aws.mumbai
+  name     = "mumbai-nginx-sg"
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_security_group" "tokyo_sg" {
+  provider = aws.tokyo
+  name     = "tokyo-nginx-sg"
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_instance" "mumbai_instance" {
+  provider               = aws.mumbai
+  ami                    = data.aws_ami.amazon_linux_mumbai.id
+  instance_type          = "t3.micro"
+  key_name               = "terraform-key"
+  vpc_security_group_ids = [aws_security_group.mumbai_sg.id]
+
+  user_data = <<-EOF
+              #!/bin/bash
+              yum update -y
+              amazon-linux-extras install nginx1 -y
+              systemctl start nginx
+              systemctl enable nginx
+              echo "<h1>Mumbai EC2 - NGINX Installed</h1>" > /usr/share/nginx/html/index.html
+              EOF
+
+  tags = {
+    Name = "Mumbai-EC2"
+  }
+}
+
+resource "aws_instance" "tokyo_instance" {
+  provider               = aws.tokyo
+  ami                    = data.aws_ami.amazon_linux_tokyo.id
+  instance_type          = "t3.micro"
+  key_name               = "terraform-key"
+  vpc_security_group_ids = [aws_security_group.tokyo_sg.id]
+
+  user_data = <<-EOF
+              #!/bin/bash
+              yum update -y
+              amazon-linux-extras install nginx1 -y
+              systemctl start nginx
+              systemctl enable nginx
+              echo "<h1>Tokyo EC2 - NGINX Installed</h1>" > /usr/share/nginx/html/index.html
+              EOF
+
+  tags = {
+    Name = "Tokyo-EC2"
+  }
+}
+
+output "mumbai_public_ip" {
+  value = aws_instance.mumbai_instance.public_ip
+}
+
+output "tokyo_public_ip" {
+  value = aws_instance.tokyo_instance.public_ip
+}
